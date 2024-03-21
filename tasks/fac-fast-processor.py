@@ -46,6 +46,7 @@ def configure_logging():
 
 LOGGER = configure_logging()
 SCHEDULE = sched.scheduler(time.time, time.sleep)
+WAIT_TIME = 900
 
 
 # %%
@@ -66,7 +67,7 @@ def get_latest_evaluated(directory) -> "datetime":
 
 
 # %%
-def job(swarm_spacecraft="A", starting_time=None, output_directory="outputs", remote_directory=None, wait_time=300):
+def job(swarm_spacecraft="A", starting_time=None, output_directory="outputs", remote_directory=None, wait_time=WAIT_TIME):
     collection_mag = f"SW_FAST_MAG{swarm_spacecraft}_LR_1B"
     # Check server for latest time in online products
     LOGGER.info("Checking product availability...")
@@ -98,7 +99,7 @@ def job(swarm_spacecraft="A", starting_time=None, output_directory="outputs", re
         LOGGER.info(f"No new data available. Waiting to check again ({wait_time}s)")
 
     # Schedule next job run
-    SCHEDULE.enter(wait_time, 1, job, (swarm_spacecraft, starting_time, output_directory, 300))
+    SCHEDULE.enter(wait_time, 1, job, (swarm_spacecraft, starting_time, output_directory, remote_directory, wait_time))
 
 
 # %%
@@ -131,7 +132,7 @@ def main(spacecraft, output_directory, remote_directory):
     LOGGER.info(f"Beginning FAC FAST processor for Swarm {spacecraft}")
     # Begin 3 days ago if output_directory is empty
     t0 = dt.datetime.now().date() - dt.timedelta(days=3)
-    SCHEDULE.enter(0, 1, job, (spacecraft, t0, output_directory, remote_directory, 300))
+    SCHEDULE.enter(0, 1, job, (spacecraft, t0, output_directory, remote_directory, WAIT_TIME))
     SCHEDULE.run()
 
 
