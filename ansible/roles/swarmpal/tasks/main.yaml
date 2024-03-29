@@ -21,7 +21,7 @@
   when: ansible_distribution == "Ubuntu"
   notify: Restart Dockerd
 
-- name: Run handlers
+- name: Run handlers now, not after all tasks
   meta: flush_handlers
 
 - name: Create the .env file
@@ -31,16 +31,6 @@
     src: env
     dest: "/home/ubuntu/.env"
     mode: "600"
-
-#- name: Pull the Docker image
-#  docker_container:
-#    name: swarmpal-processor
-#    image: ghcr.io/dawiedotcom/swarmpal-processor:test
-#    state: started
-#    pull: true
-#    ports: 5006:5006
-#    env_file: "/home/ubuntu/.env"
-#    command: /app/start-dashboard.sh
 
 - name: "Create directory for nginx config"
   become: true
