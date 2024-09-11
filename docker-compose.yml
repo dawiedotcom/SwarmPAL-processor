@@ -1,9 +1,0 @@
-version: '3.8'
-services:
-  panel:
-    image: swarmpal-processor
-    env_file:
-      - .env
-    ports:
-      - "5006:5006"
-    command: /app/start-dashboard.sh

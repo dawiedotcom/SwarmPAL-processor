@@ -1,6 +1,48 @@
 # SwarmPAL-processor
 
-## Install in venv (uv example)
+Provides both dashboards and task runner. See the dashboards deployed at:  
+https://dev.swarmdisc.org/swarmpal-processor/
+
+```mermaid
+flowchart
+subgraph SwarmPAL-processor
+
+subgraph tasks["`Tasks<br>(continuous processor)`"]
+    start_tasks.sh --> Tasks & rsync
+    subgraph Tasks["`Tasks (populate *outputs*)`"]
+        FAC[fac-fast-processor.py]
+        FAC -.-> FACA[Swarm A] & FACB[Swarm B] & FACC[Swarm C]
+    end
+    rsync["`*outputs*: rsync with remote `"]
+end
+
+subgraph Dashboards["`Dashboards<br>(built with panel)`"]
+    fac-fast
+end
+
+end
+```
+
+This repo provides Docker image:  
+[ghcr.io/swarm-disc/swarmpal-processor](https://github.com/Swarm-DISC/SwarmPAL-processor/pkgs/container/swarmpal-processor)
+
+## Run dashboard from a container
+
+Get a VirES access token from https://vires.services/accounts/tokens/ and store it in a file called `.env`:
+```
+VIRES_TOKEN=.....  # NB: omit quotation marks
+```
+
+To start the container with the panel server [(see more options here)](https://panel.holoviz.org/how_to/server/commandline.html):
+```
+podman run --rm -it -p 5006:5006 --env-file .env ghcr.io/swarm-disc/swarmpal-processor bash -c "panel serve --allow-websocket-origin '*' /app/dashboards/*.py"
+```
+
+## Run tasks from a container (TODO)
+
+## Development
+
+### Install in venv (uv example)
 
 (Tested with Python 3.12)
 
@@ -19,7 +61,7 @@ uv pip compile requirements.in -o requirements.txt
 - Develop using Jupyter: `jupyter-lab`
 - Test dashboard: `panel serve app.ipynb`
 
-## Run the processor
+### Run the processor
 
 NB: These are not stable instructions yet!
 
@@ -29,7 +71,7 @@ viresclient set_token https://vires.services/ows
 viresclient set_default_server https://vires.services/ows
 ```
 
-### Run for a given time interval
+#### Run for a given time interval
 
 (This runs the CLI provided by SwarmPAL)
 
@@ -41,7 +83,7 @@ Check the latest input product availability:
 
 `swarmpal last-available-time "SW_FAST_MAGA_LR_1B"`
 
-### Run as a continuous task
+#### Run as a continuous task
 
 (This runs the processor continuously to generate new FAC files locally as new data is available, and uploads them via FTP)
 
@@ -65,27 +107,3 @@ Some problems:
 - this does not mimic the behaviour of source data (<https://swarm-diss.eo.esa.int/#swarm/Fast/Level1b/MAGx_LR>) where newer data can supersede old data
 - ftp upload should be handled separately and retried in the background when it fails (rather than halting the whole job)
 - needs to gracefully handle errors and retry after a few minutes if there is failure
-
-### Run within container (TO DO)
-
-## Build and run the dashboard (Docker/Podman)
-
-Build the image:
-```
-podman build -t swarmpal-processor .
-```
-
-Get a VirES access token from https://vires.services/accounts/tokens/ and store it in a file called `.env`:
-```
-VIRES_TOKEN=.....
-```
-
-To start the [panel server](https://panel.holoviz.org/how_to/server/commandline.html):
-```
-podman compose up
-```
-
-or equivalently:
-```
-podman run --rm -it -p 5006:5006 --env-file .env -d swarmpal-processor /app/start-dashboard.sh
-```
