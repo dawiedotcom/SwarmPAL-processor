@@ -22,7 +22,7 @@ from tempfile import NamedTemporaryFile
 import shutil
 import os
 
-from swarmpal.toolboxes.fac.presets import fac_single_sat
+from swarmpal.express import fac_single_sat
 
 # %%
 pn.extension()
@@ -95,14 +95,18 @@ class FacDataExplorer:
             grade=self.widgets["grade"].value,
             time_start=self.widgets["start-end"].value[0].isoformat(),
             time_end=self.widgets["start-end"].value[1].isoformat(),
-            output=False,
         )
         self._update_output_pane()
         self._update_cdf_file()
 
     def _update_output_pane(self):
         title = f'## {self.widgets["spacecraft"].value} {self.widgets["grade"].value}\n{self.widgets["start-end"].value[0]} to {self.widgets["start-end"].value[1]}'
-        hvplot_obj = self.data["PAL_FAC_single_sat"].to_dataset().hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
+        mask_valid_F = self.data["PAL_FAC_single_sat"]["Flags_F"] <= 1
+        mask_valid_B = self.data["PAL_FAC_single_sat"]["Flags_B"] <= 1
+        mask_valid = mask_valid_F & mask_valid_B
+        masked_data = self.data["PAL_FAC_single_sat"].to_dataset().where(mask_valid, drop=True)
+        hvplot_obj = masked_data.hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
+        # hvplot_obj = self.data["PAL_FAC_single_sat"].to_dataset().hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
         self.output_pane[0].object = title
         self.output_pane[1].object = hvplot_obj
 

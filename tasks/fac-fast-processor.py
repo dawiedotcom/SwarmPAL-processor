@@ -1,7 +1,6 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -24,27 +23,30 @@ import time
 from ftplib import FTP
 
 from dotenv import dotenv_values
-from swarmpal.toolboxes.fac.presets import fac_single_sat
+from swarmpal.express import fac_single_sat
 from swarmpal.utils.queries import last_available_time
 
 
 # %%
-def configure_logging():
+def configure_logging(spacecraft="_"):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    # Create a console handler and set its level to INFO
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
-    # Create a formatter and set the format of log messages
+    # Create a handlers with level INFO
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    file_handler = logging.FileHandler(f"logs/fac-fast-processor_{spacecraft}.log")
+    file_handler.setLevel(logging.INFO)
+    # Set the format of log messages
     formatter = logging.Formatter("%(asctime)s - %(levelname)s:%(name)s:%(message)s")
-    # Set the formatter for the handler
-    handler.setFormatter(formatter)
-    # Add the handler to the logger
-    logger.addHandler(handler)
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+    # Add the handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
     return logger
 
 
-LOGGER = configure_logging()
+
 SCHEDULE = sched.scheduler(time.time, time.sleep)
 WAIT_TIME = 900
 
@@ -67,39 +69,39 @@ def get_latest_evaluated(directory) -> "datetime":
 
 
 # %%
-def job(swarm_spacecraft="A", starting_time=None, output_directory="outputs", remote_directory=None, wait_time=WAIT_TIME):
+def job(swarm_spacecraft="A", starting_time=None, output_directory="outputs", remote_directory=None, wait_time=WAIT_TIME, logger=None):
     collection_mag = f"SW_FAST_MAG{swarm_spacecraft}_LR_1B"
     # Check server for latest time in online products
-    LOGGER.info("Checking product availability...")
+    logger.info("Checking product availability...")
     t_latest_on_server = last_available_time(collection_mag).replace(microsecond=0)
-    LOGGER.info(f"Latest availability for {collection_mag}: {t_latest_on_server}")
+    logger.info(f"Latest availability for {collection_mag}: {t_latest_on_server}")
     # Check saved files for latest time evaluated
     try:
         t_latest_evaluated = get_latest_evaluated(output_directory)
     except ValueError:
         t_latest_evaluated = starting_time
-    LOGGER.info(f"Latest processed time end point: {t_latest_evaluated}")
+    logger.info(f"Latest processed time end point: {t_latest_evaluated}")
     # Run if there is new data available
     if t_latest_on_server != t_latest_evaluated:
         t_start = t_latest_evaluated
         t_end = t_latest_on_server
-        LOGGER.info(f"Evaluating for time period: {t_start} to {t_end}")
+        logger.info(f"Evaluating for time period: {t_start} to {t_end}")
         # Determine the name of the file to write (convert from closed-open [a,b) to closed-closed [a,b]
         t_startend_str = f'{t_start.strftime("%Y%m%dT%H%M%S")}_{(t_end - dt.timedelta(seconds=1)).strftime("%Y%m%dT%H%M%S")}'
         output_name = f"{output_directory}/SW_FAST_FAC{swarm_spacecraft}TMS_2F_{t_startend_str}_XXXX.cdf"
-        fac_single_sat(spacecraft=f"Swarm-{swarm_spacecraft}", grade="FAST", time_start=t_start, time_end=t_end, output=output_name)
+        fac_single_sat(spacecraft=f"Swarm-{swarm_spacecraft}", grade="FAST", time_start=t_start, time_end=t_end, to_cdf_file=output_name)
         # Prepare the next starting time to be the current end time
         t_latest_evaluated = t_end
-        LOGGER.info(f"New data saved: {output_name}. Waiting to check again ({wait_time}s)")
+        logger.info(f"New data saved: {output_name}. Waiting to check again ({wait_time}s)")
         # Upload the file to FTP
         if remote_directory:
-            upload_to_ftp(output_name, remote_directory)
-        LOGGER.info(f"Waiting to check again ({wait_time}s)")
+            upload_to_ftp(output_name, remote_directory, logger)
+        logger.info(f"Waiting to check again ({wait_time}s)")
     else:
-        LOGGER.info(f"No new data available. Waiting to check again ({wait_time}s)")
+        logger.info(f"No new data available. Waiting to check again ({wait_time}s)")
 
     # Schedule next job run
-    SCHEDULE.enter(wait_time, 1, job, (swarm_spacecraft, starting_time, output_directory, remote_directory, wait_time))
+    SCHEDULE.enter(wait_time, 1, job, (swarm_spacecraft, starting_time, output_directory, remote_directory, wait_time, logger))
 
 
 # %%
@@ -111,7 +113,7 @@ def get_ftp_server_credentials(env_file="../.env"):
     return {"server": server, "username":username, "password":password}
 
 
-def upload_to_ftp(local_file, remote_directory):
+def upload_to_ftp(local_file, remote_directory, logger):
     credentials = get_ftp_server_credentials()
     try:
         ftp = FTP(credentials["server"])
@@ -119,9 +121,9 @@ def upload_to_ftp(local_file, remote_directory):
         ftp.cwd(remote_directory)
         with open(local_file, "rb") as file:
             ftp.storbinary("STOR " + local_file.split('/')[-1], file)
-        LOGGER.info(f"Successfully uploaded: {local_file} to remote: {remote_directory}")
+        logger.info(f"Successfully uploaded: {local_file} to remote: {remote_directory}")
     except Exception as e:
-        LOGGER.error(f"Failed to upload {local_file} to remote: {remote_directory}\n{e}")
+        logger.error(f"Failed to upload {local_file} to remote: {remote_directory}\n{e}")
         raise e
     finally:
         ftp.quit()
@@ -129,10 +131,11 @@ def upload_to_ftp(local_file, remote_directory):
 
 # %%
 def main(spacecraft, output_directory, remote_directory):
-    LOGGER.info(f"Beginning FAC FAST processor for Swarm {spacecraft}")
+    logger = configure_logging(spacecraft=spacecraft)
+    logger.info(f"Beginning FAC FAST processor for Swarm {spacecraft}")
     # Begin 3 days ago if output_directory is empty
     t0 = dt.datetime.now().date() - dt.timedelta(days=3)
-    SCHEDULE.enter(0, 1, job, (spacecraft, t0, output_directory, remote_directory, WAIT_TIME))
+    SCHEDULE.enter(0, 1, job, (spacecraft, t0, output_directory, remote_directory, WAIT_TIME, logger))
     SCHEDULE.run()
 
 

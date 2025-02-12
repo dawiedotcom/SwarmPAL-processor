@@ -13,4 +13,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-swarmpal = { git = "https://github.com/Swarm-DISC/SwarmPAL.git", rev = "c37bc7b" }
+swarmpal = { git = "https://github.com/Swarm-DISC/SwarmPAL.git", rev = "a242931" }
