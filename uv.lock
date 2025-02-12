@@ -1887,7 +1887,7 @@ wheels = [
 [[package]]
 name = "swarmpal"
 version = "0.2.0a0"
-source = { git = "https://github.com/Swarm-DISC/SwarmPAL.git?rev=a242931#a242931e0f8dd369f1d2bedc32ffca575c12bf2f" }
+source = { git = "https://github.com/Swarm-DISC/SwarmPAL.git?rev=ff93622#ff936223101bb1c4601067eac69cc4858fb7499b" }
 dependencies = [
     { name = "click" },
     { name = "hapiclient" },
@@ -1916,7 +1916,7 @@ requires-dist = [
     { name = "jupyterlab", specifier = ">=4.3.5" },
     { name = "panel", specifier = ">=1.6.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "swarmpal", git = "https://github.com/Swarm-DISC/SwarmPAL.git?rev=a242931" },
+    { name = "swarmpal", git = "https://github.com/Swarm-DISC/SwarmPAL.git?rev=ff93622" },
 ]
 
 [[package]]

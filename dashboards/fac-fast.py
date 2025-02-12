@@ -16,12 +16,14 @@
 import random
 import string
 import datetime as dt
+import matplotlib.pyplot as plt
 import panel as pn
 import hvplot.xarray
 from tempfile import NamedTemporaryFile
 import shutil
 import os
 
+from swarmpal.utils.configs import SPACECRAFT_TO_MAGLR_DATASET
 from swarmpal.express import fac_single_sat
 
 # %%
@@ -33,10 +35,11 @@ end_of_today = start_of_today + dt.timedelta(days=1)
 four_weeks_ago = end_of_today - dt.timedelta(days=28)
 
 widgets = {
-        "spacecraft": pn.widgets.RadioBoxGroup(options=["Swarm-A", "Swarm-B", "Swarm-C"]),
+        "spacecraft": pn.widgets.RadioBoxGroup(options=list(SPACECRAFT_TO_MAGLR_DATASET.keys()), value="Swarm-A"),
         "grade": pn.widgets.RadioBoxGroup(options=["OPER", "FAST"], value="FAST"),
         "start-end": pn.widgets.DatetimeRangePicker(
-            start=four_weeks_ago,
+            # start=four_weeks_ago,
+            start=dt.date(2000, 1, 1),
             end=end_of_today,
             value=(start_of_today, end_of_today),
             enable_time=False,
@@ -44,36 +47,40 @@ widgets = {
         "action-button": pn.widgets.Button(name="Evaluate", button_type="primary")
     }
 
-controls = pn.Column(
-    widgets["start-end"],
-    widgets["spacecraft"],
-    widgets["grade"],
-    widgets["action-button"],
-)
-controls
-
 
 # %%
 class FacDataExplorer:
     def __init__(self, widgets):
         self.widgets = widgets
         self.cdf_download = pn.widgets.FileDownload(button_type="success")
+        self.interactive_output = pn.pane.HoloViews()
+        self.swarmpal_quicklook = pn.pane.Matplotlib()
+        self.output_title = pn.pane.Markdown()
         self.output_pane = pn.Column(
-            pn.pane.Markdown(),
-            pn.pane.HoloViews(),
+            self.output_title,
             pn.layout.Divider(),
             self.cdf_download,
+            pn.layout.Divider(),
+            pn.Tabs(
+                ("SwarmPAL quicklook", self.swarmpal_quicklook),
+                ("Interactive plot", self.interactive_output),
+            ),
         )
         self.widgets["action-button"].on_click(self.update_data)
         self.update_data(None)
 
     @property
     def controls(self):
-        return pn.Column(
-            self.widgets["start-end"],
-            self.widgets["spacecraft"],
-            self.widgets["grade"],
-            self.widgets["action-button"],
+        return  pn.Column(
+            pn.pane.Markdown("Select duration:"),
+            widgets["start-end"],
+            pn.layout.Divider(),
+            pn.pane.Markdown("Select spacecraft:"),
+            widgets["spacecraft"],
+            pn.layout.Divider(),
+            pn.pane.Markdown("Select processing chain: (FAST only available for Swarm)"),
+            widgets["grade"],
+            widgets["action-button"],
         )
 
     @property
@@ -101,14 +108,31 @@ class FacDataExplorer:
 
     def _update_output_pane(self):
         title = f'## {self.widgets["spacecraft"].value} {self.widgets["grade"].value}\n{self.widgets["start-end"].value[0]} to {self.widgets["start-end"].value[1]}'
-        mask_valid_F = self.data["PAL_FAC_single_sat"]["Flags_F"] <= 1
-        mask_valid_B = self.data["PAL_FAC_single_sat"]["Flags_B"] <= 1
-        mask_valid = mask_valid_F & mask_valid_B
-        masked_data = self.data["PAL_FAC_single_sat"].to_dataset().where(mask_valid, drop=True)
-        hvplot_obj = masked_data.hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
-        # hvplot_obj = self.data["PAL_FAC_single_sat"].to_dataset().hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
-        self.output_pane[0].object = title
-        self.output_pane[1].object = hvplot_obj
+        self.output_title.object = title
+        # Interactive HoloViews plot
+        if "Flags_F" in self.data["PAL_FAC_single_sat"].data_vars:
+            mask_valid_F = self.data["PAL_FAC_single_sat"]["Flags_F"] <= 1
+            mask_valid_B = self.data["PAL_FAC_single_sat"]["Flags_B"] <= 1
+            mask_valid = mask_valid_F & mask_valid_B
+            masked_data = self.data["PAL_FAC_single_sat"].to_dataset().where(mask_valid, drop=True)
+            hvplot_obj = masked_data.hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
+        else:
+            hvplot_obj = self.data["PAL_FAC_single_sat"].to_dataset().hvplot(x="Timestamp", y="FAC", ylim=(-30, 30))
+        self.interactive_output.object = hvplot_obj
+        # SwarmPAL quicklook
+        try:
+            fig, _ = self.data.swarmpal_fac.quicklook()
+            self.swarmpal_quicklook.object = fig
+        except Exception:
+            fig = self._empty_matplotlib_figure()
+            self.swarmpal_quicklook.object = fig
+
+    @staticmethod
+    def _empty_matplotlib_figure():
+        fig, ax = plt.subplots()
+        ax.set_axis_off()
+        ax.text(0.5, 0.5, "No data available / error in figure creation", ha="center", va="center", fontsize=20)
+        return fig
 
     def get_cdf_file(self):
         # work around the weirdness of cdflib xarray tools by writing to another file first then moving to a temporary file
