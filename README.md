@@ -42,24 +42,26 @@ podman run --rm -it -p 5006:5006 --env-file .env ghcr.io/swarm-disc/swarmpal-pro
 
 ## Development
 
-### Install in venv (uv example)
+### Managing uv environment
 
-(Tested with Python 3.12)
+See <https://docs.astral.sh/uv/guides/projects/> for more information.
 
-Create and activate venv, and install pip packages:
-```
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
-```
+Adding dependencies (updates `pyproject.toml` and `uv.lock`):
+- `uv add jupyterlab hvplot python-dotenv panel`
+- Add specific version of swarmpal:  
+  `uv add "swarmpal @ git+https://github.com/Swarm-DISC/SwarmPAL.git@c37bc7b"`
+- Use [uv sync](https://docs.astral.sh/uv/reference/cli/#uv-sync) to update the lock file
 
-Manually alter `requirements.in` if needed and update `requirements.txt`:
-```
-uv pip compile requirements.in -o requirements.txt
-```
+Install the venv (creates `.venv/` from the specification in `uv.lock`):  
+`uv sync --frozen`
 
-- Develop using Jupyter: `jupyter-lab`
-- Test dashboard: `panel serve app.ipynb`
+Run jupyterlab for development:  
+`uv run jupyter-lab`
+
+Test the dashboards:  
+`uv run panel serve dashboards/*`
+
+(or activate the venv with `source source .venv/bin/activate`)
 
 ### Run the processor
 
