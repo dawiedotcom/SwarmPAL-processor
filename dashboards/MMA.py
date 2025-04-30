@@ -64,8 +64,8 @@ class MmaDataExplorer:
         self.output_pane = pn.Column(
             self.output_title,
             pn.layout.Divider(),
-            self.cdf_download,
-            pn.layout.Divider(),
+            # self.cdf_download,
+            # pn.layout.Divider(),
             pn.Tabs(
                 ("Data view", self.data_view),
                 ("SwarmPAL quicklook", self.swarmpal_quicklook),
@@ -207,7 +207,8 @@ class MmaDataExplorer:
     def _update_output_pane(self):
         # title = f"## {self.widgets['spacecraft'].value} \n{self.widgets['start-end'].value[0]} to {self.widgets['start-end'].value[1]}"
         title = "## MMA_SHA_2E"
-        title += f"\n\nInputs: {', '.join([s.strip("/") for s in self.data.groups[1:-1]])}"
+        inputs = ', '.join([s.strip("/") for s in self.data.groups[1:-1]])
+        title += f"\n\nInputs: {inputs}"
         self.output_title.object = title
         # Interactive HoloViews plot
         self.interactive_output.object = None

@@ -3,8 +3,9 @@ name = "swarmpal-processor"
 version = "0.1.0"
 description = "Provides dashboards and 'processor mode' for SwarmPAL"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
+    "apexpy",
     "hvplot>=0.11.2",
     "jupyterlab>=4.3.5",
     "jupytext>=1.16.7",
@@ -19,3 +20,4 @@ dependencies = [
 [tool.uv.sources]
 swarmpal = { git = "https://github.com/Swarm-DISC/SwarmPAL", rev = "staging"}
 swarmpal-mma = { git = "https://github.com/smithara/MMA-2E", rev = "33c619ae630c3a0c5e073d706eb8b9f27de1ae8d"}
+apexpy = { url = "https://github.com/smithara/apexpy/releases/download/v2.1.0-binaries/apexpy-2.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl" }
