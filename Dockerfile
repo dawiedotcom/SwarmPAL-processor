@@ -1,6 +1,6 @@
 # Setup with uv
 # https://docs.astral.sh/uv/guides/integration/docker/
-FROM python:3.12-slim-bookworm
+FROM python:3.11-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:0.5.30 /uv /uvx /bin/
 ENV UV_NO_CACHE=1
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
