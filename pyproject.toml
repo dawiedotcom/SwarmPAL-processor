@@ -7,10 +7,15 @@ requires-python = ">=3.12"
 dependencies = [
     "hvplot>=0.11.2",
     "jupyterlab>=4.3.5",
+    "jupytext>=1.16.7",
+    "numpy<2",
     "panel>=1.6.0",
     "python-dotenv>=1.0.1",
-    "swarmpal",
+    "swarmpal[experimental]",
+    "swarmpal-mma",
+    "watchfiles",
 ]
 
 [tool.uv.sources]
-swarmpal = { git = "https://github.com/Swarm-DISC/SwarmPAL.git", rev = "ff93622" }
+swarmpal = { git = "https://github.com/Swarm-DISC/SwarmPAL", rev = "staging"}
+swarmpal-mma = { git = "https://github.com/smithara/MMA-2E", rev = "33c619ae630c3a0c5e073d706eb8b9f27de1ae8d"}

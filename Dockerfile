@@ -16,8 +16,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Add dashboards
 WORKDIR /app
-RUN mkdir /app/dashboards
-ADD dashboards/fac-fast.py /app/dashboards
+COPY dashboards/ /app/dashboards/
 # Add processors
 RUN mkdir /app/tasks
 ADD tasks/fac-fast-processor.py /app/tasks

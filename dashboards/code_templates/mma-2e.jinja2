@@ -1,0 +1,37 @@
+# NB. Install both swarmpal and swarmpal_mma packages
+# (See https://github.com/natgomezperez/MMA-2E)
+
+from swarmpal.io import create_paldata, PalDataItem
+from swarmpal_mma.pal_processes import MMA_SHA_2E
+
+data = create_paldata(
+    {% for collection_label, collection_config in data_config.items() %}{{ collection_label }}=PalDataItem.from_vires(
+        collection="{{ collection_config.collection }}",
+        measurements={{ collection_config.measurements }},
+        models={{ collection_config.models }},
+        sampling_step="{{ collection_config.sampling_step }}",
+        start_time="{{ collection_config.start_time }}",
+        end_time="{{ collection_config.end_time }}",
+        server_url="{{ collection_config.server_url }}",
+        options=dict(asynchronous={{ collection_config.options.asynchronous }}, show_progress={{ collection_config.options.show_progress }}),
+    ),{% endfor %}
+    ## Add a local file with
+    # dataset_name=PalDataItem.from_file(filename=filename.cdf, filetype="cdf"),
+)
+## Downsample the local data to PT25S, for example:
+# data[dataset_name] = data[dataset_name].sel(Timestamp=data[dataset_name].ds["Timestamp"][::25])
+## Apply the local forward model to the local data, for example:
+# from swarmpal.experimental import LocalForwardMagneticModel
+# process_local_model = LocalForwardMagneticModel()
+# process_local_model.set_config(
+#     dataset=dataset_name,
+#     model_descriptor="CHAOS-Core",
+# )
+# process_local_model(data)
+
+mma_process = MMA_SHA_2E()
+mma_process.set_config(
+    measurement_varname="B_NEC",
+    model_varname="B_NEC_CHAOS-Core",
+)
+data = mma_process(data)

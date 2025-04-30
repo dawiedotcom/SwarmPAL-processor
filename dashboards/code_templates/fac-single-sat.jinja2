@@ -1,0 +1,41 @@
+from swarmpal.io import create_paldata, PalDataItem
+from swarmpal.toolboxes import fac
+{% if mode == "local" %}
+from swarmpal.experimental import LocalForwardMagneticModel{% endif %}
+
+{% if mode == "vires" %}data = create_paldata(
+    PalDataItem.from_vires(
+        collection="{{ collection }}",
+        measurements={{ measurements | tojson }},
+        models={{ models | tojson }},
+        start_time="{{ start_time }}",
+        end_time="{{ end_time }}",
+        server_url="{{ server_url }}",
+        options=dict(asynchronous={{ asynchronous }}, show_progress={{ show_progress }}),
+    )
+){% endif %}
+{% if mode == "local" %}data = create_paldata(
+    **{
+        "{{ dataset }}": PalDataItem.from_file(
+            filename="{{ filename }}",
+            filetype="{{ filetype }}",
+        ),
+    }
+)
+process_local_model = LocalForwardMagneticModel(
+    config={
+        "dataset": "{{ dataset }}",
+        "model_descriptor": "CHAOS-Core",
+    }
+)
+data = process_local_model(data){% endif %}
+process = fac.processes.FAC_single_sat(
+    config={
+        "dataset": "{{ dataset }}",
+        "model_varname": "{{ model_varname }}",
+        "measurement_varname": "{{ measurement_varname }}",
+        "time_jump_limit": {{ time_jump_limit }},
+    },
+)
+data = process(data)
+data.swarmpal_fac.quicklook()
